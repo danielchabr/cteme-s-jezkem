@@ -72,5 +72,33 @@ const DATA = {
     { id: "syllables", name: "Slabiky",    emoji: "🧩", color: "#8a6cff", need: 8 },
     { id: "words",     name: "Slova",      emoji: "📖", color: "#ff5d8f", need: 14 },
     { id: "sentences", name: "Věty",       emoji: "🌟", color: "#3ad07a", need: 22 }
-  ]
+  ],
+
+  /* Avatars a child can pick for their profile. */
+  avatars: ["🦊","🐰","🐻","🐱","🐶","🦁","🐯","🐸","🐼","🦉","🦄","🐨","🐵","🐧","🦖","🐢"],
+
+  /* Collectible cards (Czech forest & friends). Earn one per completed round.
+   * Rarity weights how often it appears: common > rare > legendary. */
+  cards: [
+    { id: "jezek",   emoji: "🦔", name: "Ježek",      rarity: "common" },
+    { id: "mys",     emoji: "🐭", name: "Myš",        rarity: "common" },
+    { id: "pes",     emoji: "🐶", name: "Pejsek",     rarity: "common" },
+    { id: "kocka",   emoji: "🐱", name: "Kočka",      rarity: "common" },
+    { id: "ryba",    emoji: "🐟", name: "Rybka",      rarity: "common" },
+    { id: "zaba",    emoji: "🐸", name: "Žabka",      rarity: "common" },
+    { id: "sova",    emoji: "🦉", name: "Sova",       rarity: "common" },
+    { id: "zajic",   emoji: "🐰", name: "Zajíc",      rarity: "common" },
+    { id: "liska",   emoji: "🦊", name: "Liška",      rarity: "rare" },
+    { id: "srnka",   emoji: "🦌", name: "Srnka",      rarity: "rare" },
+    { id: "bobr",    emoji: "🦫", name: "Bobr",       rarity: "rare" },
+    { id: "veverka", emoji: "🐿️", name: "Veverka",    rarity: "rare" },
+    { id: "orel",    emoji: "🦅", name: "Orel",       rarity: "rare" },
+    { id: "medved",  emoji: "🐻", name: "Medvěd",     rarity: "legendary" },
+    { id: "vlk",     emoji: "🐺", name: "Vlk",        rarity: "legendary" },
+    { id: "drak",    emoji: "🐉", name: "Drak",       rarity: "legendary" },
+    { id: "jednorozec", emoji: "🦄", name: "Jednorožec", rarity: "legendary" }
+  ],
+
+  rarityWeight: { common: 6, rare: 3, legendary: 1 },
+  rarityName:   { common: "Běžná", rare: "Vzácná", legendary: "Legendární" }
 };

@@ -10,11 +10,21 @@ Hra, která učí šestileté dítě **číst česky** — hravě, s hlasem a s 
 ## ▶️ Jak spustit (How to play)
 
 1. Otevři soubor **`index.html`** (stačí na něj dvakrát kliknout — otevře se v prohlížeči).
-2. Klikni na **Samohlásky** a hraj! Za každou správnou odpověď získáš ⭐.
-3. Další ostrovy se odemknou, když nasbíráš dost hvězdiček.
+2. **Vytvoř si hráče** — vyber zvířátko a napiš jméno. Každé dítě má svého hráče.
+3. Klikni na **Samohlásky** a hraj! Za každou správnou odpověď získáš ⭐.
+4. Za splněnou výzvu dostaneš **kartičku 🃏** do sbírky. Další ostrovy se odemknou hvězdičkami.
 
 > Doporučený prohlížeč: **Safari nebo Chrome na Macu** — mají český hlas *Zuzana*.
-> Funguje bez internetu. Postup se ukládá v prohlížeči.
+> Funguje bez internetu. Postup každého hráče se ukládá v prohlížeči.
+
+### 👧🧒 Více hráčů (profily)
+Klikni na **jméno hráče vlevo nahoře** (👥) a přepneš se mezi dětmi — každé má vlastní
+hvězdičky, odemčené ostrovy i sbírku kartiček. Nového hráče přidáš tlačítkem **➕ Nový hráč**.
+Vše je uložené jen v tomto prohlížeči (nesynchronizuje se mezi zařízeními).
+
+### 🃏 Kartičky
+Za každou dokončenou výzvu dítě získá zvířecí kartičku (běžná / vzácná / legendární).
+Duplikát dá bonus **+2 ⭐**. Celou sbírku ukazuje tlačítko **🃏 Moje kartičky**.
 
 ### 🔊 Zapnutí českého hlasu (rodičům)
 Pokud ježek nemluví česky, přidejte český hlas:
