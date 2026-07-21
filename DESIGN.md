@@ -53,7 +53,7 @@ celebrates, and **you can never "lose"** — a wrong tap just gently re-asks.
 | 1 | **Samohlásky** (Vowels) A E I O U + Á É Í Ó Ú | Vowel sounds incl. **length** | Hear a vowel, tap it |
 | 2 | **Písmenka** (Consonants) B…Ž incl. Č Š Ž Ř CH | Initial sound → letter | Hear a word, tap its first letter |
 | 3 | **Malá písmena** (Lowercase) A↔a, B↔b … | **Uppercase → lowercase** letter forms | See a big letter, tap its small twin |
-| 4 | **Slabiky** (Syllables) MA … ČA ŽE | **Blending** — the core skill | Build the syllable you hear |
+| 4 | **Slabiky** (Syllables) MA/MÁ … ČÍ ŽÓ | **Blending** — the core skill | Build the syllable you hear |
 | 5 | **Slova** (Words) ~40 words | Decode & comprehend | Match the written word to its picture |
 | 6 | **Věty** (Sentences) ~16 sentences | Read for meaning | Read a sentence, pick the picture |
 
@@ -92,6 +92,10 @@ state, which matters for a 6-year-old's confidence.
   TTS voice pronounces correctly.
 - Keyword pictures use **emoji** (no asset files, always colorful) with words whose *initial
   sound* matches the letter (M → 🐭 MYŠ, L → 🦁 LEV, S → ☀️ SLUNCE, P → 🐶 PES, T → 🐯 TYGR).
+- **Syllable blending (Slabiky)** covers 17 consonants × short **and** long vowels
+  (MA/MÁ, MI/MÍ …) for wide variety. We deliberately **skip di/ti/ni** (and dí/tí/ní):
+  Czech softens them to ďi/ťi/ňi, which sounds wrong in a hard-consonant drill — that
+  spelling rule is a separate, later lesson.
 - We pronounce letters **in the context of syllables/words**, never as isolated distorted
   phonemes, so the child hears authentic Czech.
 
