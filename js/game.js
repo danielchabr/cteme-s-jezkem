@@ -490,15 +490,31 @@
       instr: "Poskládej slovo ze slabik." };
   }
 
-  function wordQ() {
+  // Slova mixes two directions for fuller reading practice.
+  function wordQ() { return rnd() < 0.5 ? wordReadQ() : wordFindQ(); }
+
+  // A) Read the written word → pick its picture. No auto-audio (Poslech is help),
+  //    so the child must actually decode the word rather than listen for it.
+  function wordReadQ() {
     const target = pick(DATA.words);
-    const others = sample(DATA.words, 2, target);
-    const opts = shuffle([target, ...others]);
-    return { kind: "choose", three: true,
+    const opts = shuffle([target, ...sample(DATA.words, 2, target)]);
+    return { kind: "choose", three: true, noAuto: true,
       hint: target.hint, say: target.text,
-      prompt: { big: target.text, cap: null },
+      prompt: { big: target.text },
       choices: opts.map(w => ({ big: w.emoji, value: w.text })),
       answer: target.text, instr: "Přečti slovo a najdi obrázek." };
+  }
+
+  // B) See the picture + hear the word → pick the matching WRITTEN word (inverse).
+  //    The reading work is scanning/decoding the three word options.
+  function wordFindQ() {
+    const target = pick(DATA.words);
+    const opts = shuffle([target, ...sample(DATA.words, 2, target)]);
+    return { kind: "choose", three: true,
+      hint: target.hint, say: target.text,
+      prompt: { pic: target.emoji },
+      choices: opts.map(w => ({ big: w.text, value: w.text })),
+      answer: target.text, instr: "Najdi slovo k obrázku." };
   }
 
   function sentenceQ(s) {
@@ -543,7 +559,7 @@
   function renderChoose(scr, q, done, ctx) {
     if (q.prompt) {
       const card = el("div", "prompt-card");
-      if (q.prompt.pic)      card.innerHTML = `<div class="pic">${q.prompt.pic}</div><div class="cap">${q.prompt.cap}</div>`;
+      if (q.prompt.pic)      card.innerHTML = `<div class="pic">${q.prompt.pic}</div>${q.prompt.cap != null ? `<div class="cap">${q.prompt.cap}</div>` : ""}`;
       else if (q.prompt.big) card.innerHTML = `<div class="big">${q.prompt.big}</div>`;
       else if (q.prompt.sentence) card.innerHTML = `<div class="big" style="font-size:clamp(28px,7vw,46px)">${q.prompt.sentence}</div>`;
       scr.appendChild(card);
@@ -587,7 +603,7 @@
     });
     scr.appendChild(choices);
 
-    setTimeout(speak, 350);
+    if (!q.noAuto) setTimeout(speak, 350);   // noAuto: read the prompt yourself (Poslech helps)
   }
 
   function lockAll(container) { container.querySelectorAll(".choice").forEach(b => b.dataset.locked = "1"); }

@@ -55,7 +55,7 @@ celebrates, and **you can never "lose"** — a wrong tap just gently re-asks.
 | 3 | **Malá písmena** (Lowercase) A↔a, B↔b … | **Uppercase → lowercase** letter forms | See a big letter, tap its small twin |
 | 4 | **Slabiky** (Syllables) MA/MÁ … ČÍ ŽÓ | **Blending** — the core skill | Build the syllable you hear |
 | 5 | **Slova ze slabik** (Words from syllables) TE+TA | **Chaining syllables** into words | Hear a word, tap its syllables in order |
-| 6 | **Slova** (Words) ~40 words | Decode & comprehend | Match the written word to its picture |
+| 6 | **Slova** (Words) ~40 words | Decode & comprehend **both ways** | Read word → pick picture, *and* picture → pick the written word |
 | 7 | **Věty** (Sentences) ~16 sentences | Read for meaning | Read a sentence, pick the picture |
 
 *Slova ze slabik* is the bridge the Czech method calls for between single-syllable blending and
