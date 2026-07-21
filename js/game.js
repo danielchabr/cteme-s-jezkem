@@ -2,6 +2,9 @@
  * game.js — Čteme s Ježkem
  * Screen flow + per-island activities + rewards. Plain globals, no modules
  * (so it runs from file://). Depends on DATA (data.js) and Sound (audio.js).
+ *
+ * Multi-profile: each child has their own profile (name + avatar) and their
+ * own progress (stars, best-per-island, collected cards), all in localStorage.
  * ========================================================================= */
 (function () {
   "use strict";
@@ -13,14 +16,13 @@
       <!-- spikes -->
       <g fill="#8a5a33">
         ${Array.from({length:11}).map((_,i)=>{
-          const a=(Math.PI)*(i/10)+Math.PI; const cx=60+Math.cos(a)*44; const cy=70+Math.sin(a)*44;
+          const a=(Math.PI)*(i/10)+Math.PI;
           const tx=60+Math.cos(a)*70; const ty=70+Math.sin(a)*70;
           return `<path d="M${60+Math.cos(a-0.09)*40} ${70+Math.sin(a-0.09)*40}
             L${tx} ${ty} L${60+Math.cos(a+0.09)*40} ${70+Math.sin(a+0.09)*40} Z"/>`;
         }).join("")}
       </g>
       <ellipse cx="60" cy="72" rx="46" ry="40" fill="#b9793f"/>
-      <!-- face -->
       <ellipse cx="60" cy="86" rx="34" ry="28" fill="#f4d8b0"/>
       <circle cx="48" cy="82" r="5.5" fill="#3a2a1f"/>
       <circle cx="72" cy="82" r="5.5" fill="#3a2a1f"/>
@@ -33,18 +35,75 @@
     </g>
   </svg>`;
 
-  /* ---------- persistent state ----------------------------------------- */
-  const SAVE_KEY = "cteme-s-jezkem-v1";
-  const State = load();
+  /* =====================================================================
+   *  PROFILES + PER-PROFILE STATE  (localStorage)
+   * ===================================================================== */
+  const PROFILES_KEY = "cteme-profiles-v1";
+  const OLD_SAVE_KEY = "cteme-s-jezkem-v1";       // single-profile save (pre-v2)
+  const saveKeyFor = id => "cteme-save-" + id;
 
-  function load() {
+  let Profiles = loadProfiles();                  // { list:[{id,name,avatar}], activeId }
+  let State = null;                               // active profile's save
+
+  function loadProfiles() {
     try {
-      const s = JSON.parse(localStorage.getItem(SAVE_KEY));
-      if (s && typeof s.stars === "number") return s;
+      const p = JSON.parse(localStorage.getItem(PROFILES_KEY));
+      if (p && Array.isArray(p.list)) return p;
     } catch (e) {}
-    return { stars: 0, best: {} }; // best[islandId] = stars earned there
+    return { list: [], activeId: null };
   }
-  function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(State)); } catch (e) {} }
+  function saveProfiles() { try { localStorage.setItem(PROFILES_KEY, JSON.stringify(Profiles)); } catch (e) {} }
+
+  function loadState(id) {
+    try {
+      const s = JSON.parse(localStorage.getItem(saveKeyFor(id)));
+      if (s && typeof s.stars === "number") { if (!s.cards) s.cards = {}; if (!s.best) s.best = {}; return s; }
+    } catch (e) {}
+    return { stars: 0, best: {}, cards: {} };
+  }
+  function save() {
+    if (State && Profiles.activeId) { try { localStorage.setItem(saveKeyFor(Profiles.activeId), JSON.stringify(State)); } catch (e) {} }
+  }
+
+  function activeProfile() { return Profiles.list.find(p => p.id === Profiles.activeId) || null; }
+  function setActive(id) { Profiles.activeId = id; State = loadState(id); saveProfiles(); }
+  function newId() { return "p" + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36); }
+
+  function createProfile(name, avatar) {
+    const id = newId();
+    Profiles.list.push({ id: id, name: name, avatar: avatar });
+    Profiles.activeId = id;
+    saveProfiles();
+    State = { stars: 0, best: {}, cards: {} };
+    save();
+    return id;
+  }
+  function deleteProfile(id) {
+    Profiles.list = Profiles.list.filter(p => p.id !== id);
+    if (Profiles.activeId === id) { Profiles.activeId = null; State = null; }
+    try { localStorage.removeItem(saveKeyFor(id)); } catch (e) {}
+    saveProfiles();
+  }
+
+  // One-time migration: fold any pre-v2 single save into a first profile.
+  function maybeMigrate() {
+    if (Profiles.list.length) return;
+    try {
+      const old = JSON.parse(localStorage.getItem(OLD_SAVE_KEY));
+      if (old && typeof old.stars === "number" && (old.stars > 0 || (old.best && Object.keys(old.best).length))) {
+        const id = newId();
+        Profiles.list.push({ id: id, name: "Hráč", avatar: "🦔" });
+        localStorage.setItem(saveKeyFor(id), JSON.stringify({ stars: old.stars, best: old.best || {}, cards: {} }));
+        saveProfiles();
+      }
+    } catch (e) {}
+  }
+
+  // Progress summary for a profile (used on the picker cards).
+  function summaryFor(id) {
+    const s = loadState(id);
+    return { stars: s.stars, cards: Object.keys(s.cards || {}).length };
+  }
 
   /* ---------- tiny DOM + util helpers ---------------------------------- */
   const $ = sel => document.querySelector(sel);
@@ -54,33 +113,155 @@
   function reseed() { seed = (Date.now() % 2147483647) || 1; }
   const pick = a => a[Math.floor(rnd() * a.length)];
   const sample = (a, n, exclude) => shuffle(a.filter(x => x !== exclude)).slice(0, n);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   const screen = () => $("#screen");
-  const starBadge = () => $("#starCount");
 
-  /* ---------- top bar / stars ------------------------------------------ */
-  function refreshStars() { starBadge().textContent = State.stars; }
+  /* =====================================================================
+   *  TOP BAR
+   * ===================================================================== */
+  function renderTopBar(mode) {
+    const tb = $("#topbar"); tb.innerHTML = "";
+    if (mode === "none") {                     // profile picker / create — logo only
+      tb.appendChild(el("div", "title", "🦔 Čteme s Ježkem"));
+      return;
+    }
+    const p = activeProfile();
+    const chip = el("button", "profile-chip",
+      `<span class="av">${p ? p.avatar : "👤"}</span><span class="pn">${p ? esc(p.name) : ""}</span><span class="sw">👥</span>`);
+    chip.title = "Přepnout hráče";
+    chip.onclick = () => { Sound.sfx.tap(); goProfiles(); };
+    tb.appendChild(chip);
 
-  function addStar() {
-    State.stars += 1; save(); refreshStars();
+    tb.appendChild(el("div", "spacer"));
+
+    const cards = el("button", "chip cards-chip",
+      `🃏 <span id="cardCount">${collectedCount()}/${DATA.cards.length}</span>`);
+    cards.title = "Kartičky";
+    cards.onclick = () => { Sound.sfx.tap(); goCards(); };
+    tb.appendChild(cards);
+
+    tb.appendChild(el("div", "stars-badge", `<span class="s">⭐</span><span id="starCount">${State ? State.stars : 0}</span>`));
+  }
+
+  function refreshStars() { const n = $("#starCount"); if (n && State) n.textContent = State.stars; }
+  function refreshCards() { const n = $("#cardCount"); if (n) n.textContent = collectedCount() + "/" + DATA.cards.length; }
+  function collectedCount() { return State ? Object.keys(State.cards).length : 0; }
+
+  function addStar(n) {
+    n = n || 1;
+    State.stars += n; save(); refreshStars();
     Sound.sfx.star();
-    const b = $(".stars-badge"); b.animate(
+    const b = $(".stars-badge"); if (b) b.animate(
       [{ transform: "scale(1)" }, { transform: "scale(1.25)" }, { transform: "scale(1)" }],
       { duration: 320, easing: "ease" });
   }
 
   /* =====================================================================
-   *  HOME / MAP
+   *  PROFILE PICKER
    * ===================================================================== */
-  function goHome() {
+  function goProfiles() {
+    renderTopBar("none");
     reseed();
     const s = screen(); s.innerHTML = "";
     const scr = el("div", "screen");
 
     const hero = el("div", "home-hero");
     hero.innerHTML = HEDGEHOG;
-    const bubble = el("div", "speech", "Ahoj! Já jsem ježek <b>Bodlinka</b>. Pojď si číst! 📖");
-    hero.appendChild(bubble);
+    hero.appendChild(el("div", "speech", "Kdo si dnes bude číst? 📖"));
+    scr.appendChild(hero);
+
+    const grid = el("div", "profile-grid");
+    Profiles.list.forEach(p => {
+      const sum = summaryFor(p.id);
+      const card = el("div", "profile-card");
+      card.innerHTML =
+        `<span class="pav">${p.avatar}</span>
+         <span class="pnm">${esc(p.name)}</span>
+         <span class="pmeta">⭐ ${sum.stars} · 🃏 ${sum.cards}</span>`;
+      const del = el("button", "pdel", "✕");
+      del.title = "Smazat hráče";
+      del.onclick = (ev) => {
+        ev.stopPropagation();
+        if (confirm("Opravdu smazat hráče „" + p.name + "“? Jeho postup se ztratí.")) {
+          Sound.sfx.nudge(); deleteProfile(p.id); goProfiles();
+        }
+      };
+      card.appendChild(del);
+      card.onclick = () => { Sound.warm(); Sound.sfx.tap(); setActive(p.id); goHome(); };
+      grid.appendChild(card);
+    });
+
+    const add = el("button", "profile-card add");
+    add.innerHTML = `<span class="pav">➕</span><span class="pnm">Nový hráč</span>`;
+    add.onclick = () => { Sound.sfx.tap(); goCreateProfile(); };
+    grid.appendChild(add);
+
+    scr.appendChild(grid);
+    s.appendChild(scr);
+  }
+
+  /* =====================================================================
+   *  CREATE PROFILE
+   * ===================================================================== */
+  function goCreateProfile() {
+    renderTopBar("none");
+    const s = screen(); s.innerHTML = "";
+    const scr = el("div", "screen");
+
+    scr.appendChild(el("div", "speech", "Vyber si zvířátko a napiš jméno ✏️"));
+
+    let chosenAvatar = DATA.avatars[0];
+    const avGrid = el("div", "avatar-grid");
+    DATA.avatars.forEach((a, i) => {
+      const b = el("button", "avatar" + (i === 0 ? " sel" : ""), a);
+      b.onclick = () => {
+        Sound.sfx.tap();
+        chosenAvatar = a;
+        avGrid.querySelectorAll(".avatar").forEach(x => x.classList.remove("sel"));
+        b.classList.add("sel");
+      };
+      avGrid.appendChild(b);
+    });
+    scr.appendChild(avGrid);
+
+    const input = el("input", "name-input");
+    input.type = "text";
+    input.maxLength = 12;
+    input.placeholder = "Jméno";
+    input.autocomplete = "off";
+    input.setAttribute("autocapitalize", "words");
+    scr.appendChild(input);
+
+    const btns = el("div", "rowbtns");
+    const back = el("button", "btn ghost", "← Zpět");
+    back.onclick = () => { Sound.sfx.tap(); goProfiles(); };
+    const done = el("button", "btn primary", "✅ Hotovo");
+    done.onclick = () => {
+      const name = input.value.trim() || chosenAvatar;   // fall back to avatar if empty
+      Sound.warm(); Sound.sfx.correct();
+      createProfile(name, chosenAvatar);
+      goHome();
+    };
+    btns.appendChild(back); btns.appendChild(done);
+    scr.appendChild(btns);
+    s.appendChild(scr);
+    setTimeout(() => input.focus(), 150);
+  }
+
+  /* =====================================================================
+   *  HOME / MAP
+   * ===================================================================== */
+  function goHome() {
+    renderTopBar("home");
+    reseed();
+    const s = screen(); s.innerHTML = "";
+    const scr = el("div", "screen");
+
+    const hero = el("div", "home-hero");
+    hero.innerHTML = HEDGEHOG;
+    const who = activeProfile();
+    hero.appendChild(el("div", "speech", `Ahoj <b>${who ? esc(who.name) : ""}</b>! Pojď si číst! 📖`));
     scr.appendChild(hero);
 
     const map = el("div", "map");
@@ -100,6 +281,11 @@
     });
     scr.appendChild(map);
 
+    // Card-collection call-to-action
+    const cc = el("button", "collect-btn", `🃏 Moje kartičky — ${collectedCount()}/${DATA.cards.length}`);
+    cc.onclick = () => { Sound.sfx.tap(); goCards(); };
+    scr.appendChild(cc);
+
     if (!Sound.czechAvailable()) {
       scr.appendChild(el("div", "tip",
         "Tip pro rodiče: pro <b>český hlas</b> zapněte v macOS Nastavení → Zpřístupnění → " +
@@ -112,6 +298,59 @@
     const n = parseInt(hex.slice(1), 16);
     const r = Math.min(255, (n >> 16) + 40), g = Math.min(255, ((n >> 8) & 255) + 40), b = Math.min(255, (n & 255) + 40);
     return `rgb(${r},${g},${b})`;
+  }
+
+  /* =====================================================================
+   *  CARD COLLECTION
+   * ===================================================================== */
+  function goCards() {
+    renderTopBar("home");
+    const s = screen(); s.innerHTML = "";
+    const scr = el("div", "screen");
+
+    const head = el("div", "topbar");
+    const back = el("button", "iconbtn", "🏠");
+    back.onclick = () => { Sound.sfx.tap(); goHome(); };
+    head.appendChild(back);
+    head.appendChild(el("div", "spacer"));
+    head.appendChild(el("div", "coll-count", `🃏 ${collectedCount()} / ${DATA.cards.length}`));
+    scr.appendChild(head);
+
+    scr.appendChild(el("div", "speech", "Sbírej kartičky za splněné výzvy! 🌟"));
+
+    const grid = el("div", "card-grid");
+    DATA.cards.forEach(c => {
+      const count = State.cards[c.id] || 0;
+      const owned = count > 0;
+      const card = el("div", "collectible " + c.rarity + (owned ? "" : " locked"));
+      card.innerHTML = owned
+        ? `<span class="cemoji">${c.emoji}</span>
+           <span class="cname">${c.name}</span>
+           <span class="crar">${DATA.rarityName[c.rarity]}</span>
+           ${count > 1 ? `<span class="cdup">×${count}</span>` : ""}`
+        : `<span class="cemoji">❓</span><span class="cname">?</span>`;
+      if (owned) card.onclick = () => { Sound.sfx.tap(); Sound.say(c.name, { rate: 0.85 }); };
+      grid.appendChild(card);
+    });
+    scr.appendChild(grid);
+    s.appendChild(scr);
+  }
+
+  // Pick a card by rarity weight; prefer new ones until the deck is complete.
+  function weightedPick(pool) {
+    let total = 0; pool.forEach(c => total += DATA.rarityWeight[c.rarity]);
+    let r = rnd() * total;
+    for (const c of pool) { r -= DATA.rarityWeight[c.rarity]; if (r <= 0) return c; }
+    return pool[pool.length - 1];
+  }
+  function awardCard() {
+    const uncollected = DATA.cards.filter(c => !State.cards[c.id]);
+    let card, isNew;
+    if (uncollected.length) { card = weightedPick(uncollected); isNew = true; }
+    else { card = weightedPick(DATA.cards); isNew = false; }
+    State.cards[card.id] = (State.cards[card.id] || 0) + 1;
+    save();
+    return { card: card, isNew: isNew };
   }
 
   /* =====================================================================
@@ -135,9 +374,8 @@
   }
   const times = (n, fn) => Array.from({ length: n }, fn);
 
-  /* ---- question generators (each returns a render() into a container) --- */
+  /* ---- question generators --------------------------------------------- */
 
-  // 1. Vowels: hear a vowel, tap it among 3.
   function vowelQ() {
     const target = pick(DATA.vowels);
     const opts = shuffle([target, ...sample(DATA.vowels, 2, target)]);
@@ -146,14 +384,11 @@
       instr: "Poslouchej a najdi písmenko." };
   }
 
-  // 2. Consonants: hear a keyword (picture shown), tap its starting letter.
   function consonantQ() {
     const target = pick(DATA.consonants);
     const others = sample(DATA.consonants, 2, target);
     const opts = shuffle([target, ...others]);
     // Say ONLY the word (e.g. "Slunce"); the child works out the first letter.
-    // We deliberately don't speak the isolated letter: Czech TTS reads it as the
-    // letter *name* ("es", "el"), not the sound, and it also gave away the answer.
     return { kind: "choose",
       say: target.word,
       prompt: { pic: target.emoji, cap: "?" },
@@ -162,7 +397,6 @@
       instr: "Kterým písmenkem začíná?" };
   }
 
-  // 3. Syllables: build the spoken target from consonant + vowel tiles.
   function syllableQ() {
     const grp = pick(DATA.syllableGroups);
     const target = pick(grp.syllables);
@@ -171,7 +405,6 @@
       vowels: DATA.vowels.slice(), instr: "Postav slabiku, kterou slyšíš." };
   }
 
-  // 4. Words: read the word, pick the matching picture (of 3).
   function wordQ() {
     const target = pick(DATA.words);
     const others = sample(DATA.words, 2, target);
@@ -183,7 +416,6 @@
       answer: target.text, instr: "Přečti slovo a najdi obrázek." };
   }
 
-  // 5. Sentences: read the sentence, pick the matching picture.
   function sentenceQ(s) {
     const others = sample(DATA.sentences, 2, s);
     const opts = shuffle([s, ...others]);
@@ -201,7 +433,6 @@
     const s = screen(); s.innerHTML = "";
     const scr = el("div", "screen");
 
-    // header: back + progress pips
     const head = el("div", "topbar");
     const back = el("button", "iconbtn", "🏠");
     back.onclick = () => { Sound.sfx.tap(); goHome(); };
@@ -224,7 +455,6 @@
 
   /* ---- CHOOSE activity ------------------------------------------------- */
   function renderChoose(scr, q, done) {
-    // prompt card (letter / picture / word / sentence)
     if (q.prompt) {
       const card = el("div", "prompt-card");
       if (q.prompt.pic)      card.innerHTML = `<div class="pic">${q.prompt.pic}</div><div class="cap">${q.prompt.cap}</div>`;
@@ -267,7 +497,6 @@
     });
     scr.appendChild(choices);
 
-    // auto-speak the prompt shortly after render
     setTimeout(speak, 350);
   }
 
@@ -275,7 +504,7 @@
 
   /* ---- BUILD activity (syllable synthesis) ----------------------------- */
   function renderBuild(scr, q, done) {
-    const target = q.target;                 // e.g. "MI"
+    const target = q.target;
     const tCons = target[0], tVow = target.slice(1);
     let cSlot = null, vSlot = null;
 
@@ -316,7 +545,6 @@
         Sound.sfx.correct(); addStar(); confetti(10);
         setTimeout(done, 1100);
       } else if (cSlot === tCons && vSlot !== tVow) {
-        // consonant ok, wrong vowel — gently clear the vowel to try again
         Sound.sfx.nudge(); slotV.classList.remove("filled"); slotV.textContent = ""; vSlot = null;
       } else if (vSlot === tVow && cSlot !== tCons) {
         Sound.sfx.nudge(); slotC.classList.remove("filled"); slotC.textContent = ""; cSlot = null;
@@ -331,12 +559,17 @@
   }
 
   /* =====================================================================
-   *  END OF ROUND
+   *  END OF ROUND  (stars + a collectible card)
    * ===================================================================== */
   function finishRound(id, correct, total) {
     const island = DATA.islands.find(i => i.id === id);
     State.best[id] = Math.max(State.best[id] || 0, correct);
     save();
+
+    const reward = awardCard();               // always earn a card for finishing
+    if (!reward.isNew) addStar(2);            // duplicate → bonus stars instead
+    refreshCards();
+
     Sound.sfx.win(); confetti(80);
     setTimeout(() => Sound.say("Výborně! Skvělá práce!", { rate: 0.9 }), 300);
 
@@ -352,6 +585,19 @@
        <h2>Hotovo, ${island.name}!</h2>
        <div style="font-weight:700;font-size:20px">Získal jsi ${correct} ⭐</div>`;
     scr.appendChild(card);
+
+    // Card reveal
+    const c = reward.card;
+    const reveal = el("div", "reveal " + c.rarity);
+    reveal.innerHTML =
+      `<div class="reveal-label">${reward.isNew ? "🎉 Nová kartička!" : "Máš ji znovu! +2 ⭐"}</div>
+       <div class="collectible ${c.rarity} pop">
+         <span class="cemoji">${c.emoji}</span>
+         <span class="cname">${c.name}</span>
+         <span class="crar">${DATA.rarityName[c.rarity]}</span>
+       </div>`;
+    scr.appendChild(reveal);
+    setTimeout(() => { if (c.rarity !== "common") Sound.sfx.star(); }, 500);
 
     const nextIsland = nextUnlockable(id);
     const btns = el("div", "rowbtns");
@@ -376,7 +622,7 @@
   }
 
   /* =====================================================================
-   *  CONFETTI (pure DOM, no assets)
+   *  CONFETTI
    * ===================================================================== */
   const CONF_COLORS = ["#ff8a3d", "#ffcf3f", "#3ad07a", "#8a6cff", "#ff5d8f", "#4bc0c8"];
   function confetti(n) {
@@ -396,10 +642,13 @@
    *  BOOT
    * ===================================================================== */
   window.addEventListener("DOMContentLoaded", () => {
-    refreshStars();
-    // Warm up audio + voices on the very first tap anywhere (autoplay policy).
     const warm = () => { Sound.warm(); document.removeEventListener("pointerdown", warm); };
     document.addEventListener("pointerdown", warm);
-    goHome();
+
+    maybeMigrate();
+
+    if (Profiles.activeId && activeProfile()) { setActive(Profiles.activeId); goHome(); }
+    else if (Profiles.list.length) { goProfiles(); }
+    else { goCreateProfile(); }                // very first run: make a profile
   });
 })();
