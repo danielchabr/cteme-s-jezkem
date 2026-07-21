@@ -29,7 +29,11 @@ const Sound = (function () {
     opts = opts || {};
     if (!window.speechSynthesis) { if (opts.onend) opts.onend(); return; }
     try { speechSynthesis.cancel(); } catch (e) {}
-    const u = new SpeechSynthesisUtterance(text);
+    // Speak lowercase: the Czech voice spells short ALL-CAPS tokens as letter
+    // NAMES (e.g. "LU" -> "el-u", measured ~2x longer). Lowercase forces the
+    // engine to read them as a blended syllable/word. Display stays uppercase.
+    const spoken = (typeof text === "string") ? text.toLowerCase() : text;
+    const u = new SpeechSynthesisUtterance(spoken);
     if (czVoice) u.voice = czVoice;
     u.lang = "cs-CZ";
     u.rate = opts.rate != null ? opts.rate : 0.8; // a touch slow for a 6yo
