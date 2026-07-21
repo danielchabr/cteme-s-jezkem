@@ -417,6 +417,7 @@
     if (id === "consonants") return times(ROUND_LEN, consonantQ);
     if (id === "lowercase")  return times(ROUND_LEN, lowercaseQ);
     if (id === "syllables")  return times(ROUND_LEN, syllableQ);
+    if (id === "buildwords") return times(ROUND_LEN, buildWordQ);
     if (id === "words")      return times(ROUND_LEN, wordQ);
     if (id === "sentences")  return sample(DATA.sentences, ROUND_LEN).map(sentenceQ);
     return [];
@@ -462,7 +463,9 @@
   function syllableQ() {
     const cObj = pick(DATA.syllableConsonants);
     const c = cObj.c;
-    const useLong = rnd() < 0.4;                         // ~40% long-vowel syllables
+    // long (harder) vowels appear only after the first medal on this island
+    const allowLong = islandMedal("syllables") >= 1;
+    const useLong = allowLong && rnd() < 0.4;
     let vowelPool = (useLong ? DATA.longVowels : DATA.vowels).slice();
     if (cObj.hardOnly) vowelPool = vowelPool.filter(v => v !== "I" && v !== "Í"); // no soft di/ti/ni
     const vowel = pick(vowelPool);
@@ -471,8 +474,20 @@
     const others = sample(DATA.syllableConsonants.filter(x => x.c !== c), 2).map(x => x.c);
     return { kind: "build", target: target,
       cons: shuffle([c, others[0], others[1]]),
-      vowelsShort: DATA.vowels.slice(), vowelsLong: DATA.longVowels.slice(),
+      vowelsShort: DATA.vowels.slice(),
+      vowelsLong: allowLong ? DATA.longVowels.slice() : [],   // long row hidden until first medal
       instr: "Postav slabiku, kterou slyšíš." };
+  }
+
+  // Slova ze slabik: hear a word, build it by tapping its syllables in order.
+  function buildWordQ() {
+    const w = pick(DATA.syllableWords);
+    const pool = [];
+    DATA.syllableWords.forEach(x => { if (x !== w) x.parts.forEach(p => { if (w.parts.indexOf(p) < 0) pool.push(p); }); });
+    const distractors = sample([...new Set(pool)], 3);
+    return { kind: "buildword", word: w.word, parts: w.parts, emoji: w.emoji,
+      tiles: shuffle([...w.parts, ...distractors]),
+      instr: "Poskládej slovo ze slabik." };
   }
 
   function wordQ() {
@@ -517,6 +532,7 @@
 
     if (q.kind === "choose") renderChoose(scr, q, onDone, ctx);
     else if (q.kind === "build") renderBuild(scr, q, onDone, ctx);
+    else if (q.kind === "buildword") renderBuildWord(scr, q, onDone, ctx);
 
     s.appendChild(scr);
 
@@ -641,6 +657,68 @@
     }
 
     setTimeout(() => Sound.say(target, { rate: 0.7 }), 400);
+  }
+
+  /* ---- BUILD-WORD activity (chain syllables into a word) ---------------- */
+  function renderBuildWord(scr, q, done, ctx) {
+    const card = el("div", "prompt-card");
+    card.innerHTML = `<div class="pic">${q.emoji}</div>`;
+    scr.appendChild(card);
+
+    const listen = el("button", "listen", "🔊 Poslech");
+    listen.onclick = () => { Sound.warm(); Sound.sfx.tap(); Sound.sayHint(q.parts, q.word); };
+    scr.appendChild(listen);
+
+    const slots = new Array(q.parts.length).fill(null);   // each: {syll, el} or null
+    const builder = el("div", "builder");
+    const slotEls = [];
+    q.parts.forEach((_, i) => {
+      const sl = el("div", "slot syl");
+      sl.onclick = () => {
+        if (builder.dataset.locked || !slots[i]) return;
+        Sound.sfx.tap();
+        slots[i].el.disabled = false; slots[i].el.classList.remove("used");
+        slots[i] = null; sl.textContent = ""; sl.classList.remove("filled");
+      };
+      slotEls.push(sl); builder.appendChild(sl);
+    });
+    scr.appendChild(builder);
+
+    const tileRow = el("div", "tile-row");
+    q.tiles.forEach(syl => {
+      const t = el("button", "tile syl", syl);
+      t.onclick = () => {
+        if (builder.dataset.locked || t.disabled) return;
+        const idx = slots.indexOf(null);
+        if (idx < 0) return;
+        Sound.sfx.tap();
+        slots[idx] = { syll: syl, el: t };
+        slotEls[idx].textContent = syl; slotEls[idx].classList.add("filled");
+        t.disabled = true; t.classList.add("used");
+        if (slots.indexOf(null) < 0) check();
+      };
+      tileRow.appendChild(t);
+    });
+    scr.appendChild(tileRow);
+
+    function check() {
+      const made = slots.map(s => s.syll).join("");
+      if (made === q.word) {
+        builder.dataset.locked = "1";
+        Sound.say(q.word, { rate: 0.8 });
+        Sound.sfx.correct(); addStar(); confetti(10);
+        setTimeout(done, 1200);
+      } else {
+        if (ctx) ctx.errors++;
+        Sound.sfx.nudge();
+        slots.forEach((s, i) => {
+          if (s) { s.el.disabled = false; s.el.classList.remove("used"); }
+          slots[i] = null; slotEls[i].textContent = ""; slotEls[i].classList.remove("filled");
+        });
+      }
+    }
+
+    setTimeout(() => Sound.sayHint(q.parts, q.word), 450);
   }
 
   /* =====================================================================

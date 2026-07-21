@@ -46,7 +46,7 @@ adaptive difficulty, and no punishing "fail" states**
 happy/gentle feedback with sound + animation, 6-question rounds, a warm mascot that
 celebrates, and **you can never "lose"** — a wrong tap just gently re-asks.
 
-## 2. Learning progression (the 5 islands)
+## 2. Learning progression (the 7 islands)
 
 | # | Island (Ostrov) | Skill | Task |
 |---|---|---|---|
@@ -54,8 +54,16 @@ celebrates, and **you can never "lose"** — a wrong tap just gently re-asks.
 | 2 | **Písmenka** (Consonants) B…Ž incl. Č Š Ž Ř CH | Initial sound → letter | Hear a word, tap its first letter |
 | 3 | **Malá písmena** (Lowercase) A↔a, B↔b … | **Uppercase → lowercase** letter forms | See a big letter, tap its small twin |
 | 4 | **Slabiky** (Syllables) MA/MÁ … ČÍ ŽÓ | **Blending** — the core skill | Build the syllable you hear |
-| 5 | **Slova** (Words) ~40 words | Decode & comprehend | Match the written word to its picture |
-| 6 | **Věty** (Sentences) ~16 sentences | Read for meaning | Read a sentence, pick the picture |
+| 5 | **Slova ze slabik** (Words from syllables) TE+TA | **Chaining syllables** into words | Hear a word, tap its syllables in order |
+| 6 | **Slova** (Words) ~40 words | Decode & comprehend | Match the written word to its picture |
+| 7 | **Věty** (Sentences) ~16 sentences | Read for meaning | Read a sentence, pick the picture |
+
+*Slova ze slabik* is the bridge the Czech method calls for between single-syllable blending and
+whole-word reading — decoding a word by reading it in syllable chunks, left to right.
+
+**Progressive difficulty inside Slabiky:** long vowels (MÁ, MÍ …) only appear once the child
+has earned their first medal on the island, so the drill starts gentle (5 short vowels) and
+grows (10) as they improve.
 
 Islands unlock in order; each needs a small number of stars to open the next, so the child
 always plays inside their zone of competence (adaptive gating).

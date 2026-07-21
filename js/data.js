@@ -64,6 +64,30 @@ const DATA = {
   ],
   longVowels: ["Á", "É", "Í", "Ó", "Ú"],   // short vowels are DATA.vowels above
 
+  /* Slova ze slabik — the middle step between Slabiky and Slova: hear a word,
+   * build it by picking its syllables in order (TE + TA). Clean two-syllable
+   * open words so each part is a syllable the child just practised. */
+  syllableWords: [
+    { word: "MÁMA", emoji: "👩", parts: ["MÁ", "MA"] },
+    { word: "TÁTA", emoji: "👨", parts: ["TÁ", "TA"] },
+    { word: "TETA", emoji: "🧑", parts: ["TE", "TA"] },
+    { word: "KOLO", emoji: "🚲", parts: ["KO", "LO"] },
+    { word: "VODA", emoji: "💧", parts: ["VO", "DA"] },
+    { word: "NOHA", emoji: "🦵", parts: ["NO", "HA"] },
+    { word: "RUKA", emoji: "✋", parts: ["RU", "KA"] },
+    { word: "DUHA", emoji: "🌈", parts: ["DU", "HA"] },
+    { word: "BOTA", emoji: "👢", parts: ["BO", "TA"] },
+    { word: "SOVA", emoji: "🦉", parts: ["SO", "VA"] },
+    { word: "RYBA", emoji: "🐟", parts: ["RY", "BA"] },
+    { word: "ŽÁBA", emoji: "🐸", parts: ["ŽÁ", "BA"] },
+    { word: "KOZA", emoji: "🐐", parts: ["KO", "ZA"] },
+    { word: "MÍSA", emoji: "🥣", parts: ["MÍ", "SA"] },
+    { word: "VÍLA", emoji: "🧚", parts: ["VÍ", "LA"] },
+    { word: "KÁVA", emoji: "☕", parts: ["KÁ", "VA"] },
+    { word: "LÁVA", emoji: "🌋", parts: ["LÁ", "VA"] },
+    { word: "SÍLA", emoji: "💪", parts: ["SÍ", "LA"] }
+  ],
+
   /* Slova (words) with pictures — a big, varied deck so words rarely repeat.
    * `hint` (optional) claps the word into syllables when read aloud. */
   words: [
@@ -142,12 +166,13 @@ const DATA = {
   /* Island metadata. `tier` (1..N by order) gates which cards can drop here.
    * Island ids are STABLE for backward-compatible saves. */
   islands: [
-    { id: "vowels",     name: "Samohlásky",   emoji: "🅰️", color: "#ff8a3d", need: 0,  tier: 1 },
-    { id: "consonants", name: "Písmenka",     emoji: "🔤", color: "#4bc0c8", need: 3,  tier: 2 },
-    { id: "lowercase",  name: "Malá písmena", emoji: "🔡", color: "#f5a524", need: 7,  tier: 3 },
-    { id: "syllables",  name: "Slabiky",      emoji: "🧩", color: "#8a6cff", need: 12, tier: 4 },
-    { id: "words",      name: "Slova",        emoji: "📖", color: "#ff5d8f", need: 18, tier: 5 },
-    { id: "sentences",  name: "Věty",         emoji: "🌟", color: "#3ad07a", need: 26, tier: 6 }
+    { id: "vowels",     name: "Samohlásky",     emoji: "🅰️", color: "#ff8a3d", need: 0,  tier: 1 },
+    { id: "consonants", name: "Písmenka",       emoji: "🔤", color: "#4bc0c8", need: 3,  tier: 2 },
+    { id: "lowercase",  name: "Malá písmena",   emoji: "🔡", color: "#f5a524", need: 7,  tier: 3 },
+    { id: "syllables",  name: "Slabiky",        emoji: "🧩", color: "#8a6cff", need: 12, tier: 4 },
+    { id: "buildwords", name: "Slova ze slabik",emoji: "🧱", color: "#5a9cff", need: 17, tier: 5 },
+    { id: "words",      name: "Slova",          emoji: "📖", color: "#ff5d8f", need: 23, tier: 6 },
+    { id: "sentences",  name: "Věty",           emoji: "🌟", color: "#3ad07a", need: 30, tier: 7 }
   ],
 
   /* Avatars a child can pick for their profile. */
@@ -177,16 +202,21 @@ const DATA = {
     { id: "kachna",  emoji: "🦆", name: "Kachna",  rarity: "common", tier: 4 },
     { id: "srnka",   emoji: "🦌", name: "Srnka",   rarity: "rare",   tier: 4 },
     { id: "netopyr", emoji: "🦇", name: "Netopýr", rarity: "rare",   tier: 4 },
-    // tier 5 — Slova
-    { id: "bobr",    emoji: "🦫", name: "Bobr",     rarity: "rare",  tier: 5 },
-    { id: "jezevec", emoji: "🦡", name: "Jezevec",  rarity: "rare",  tier: 5 },
-    { id: "divocak", emoji: "🐗", name: "Divočák",  rarity: "rare",  tier: 5 },
-    { id: "orel",    emoji: "🦅", name: "Orel",     rarity: "rare",  tier: 5 },
-    // tier 6 — Věty (legendary)
-    { id: "vlk",        emoji: "🐺", name: "Vlk",        rarity: "legendary", tier: 6 },
-    { id: "medved",     emoji: "🐻", name: "Medvěd",     rarity: "legendary", tier: 6 },
-    { id: "drak",       emoji: "🐉", name: "Drak",       rarity: "legendary", tier: 6 },
-    { id: "jednorozec", emoji: "🦄", name: "Jednorožec", rarity: "legendary", tier: 6 }
+    // tier 5 — Slova ze slabik
+    { id: "bobr",    emoji: "🦫", name: "Bobr",     rarity: "rare",   tier: 5 },
+    { id: "jezevec", emoji: "🦡", name: "Jezevec",  rarity: "rare",   tier: 5 },
+    { id: "zelva",   emoji: "🐢", name: "Želva",    rarity: "common", tier: 5 },
+    { id: "vydra",   emoji: "🦦", name: "Vydra",    rarity: "rare",   tier: 5 },
+    // tier 6 — Slova
+    { id: "divocak",  emoji: "🐗", name: "Divočák",  rarity: "rare", tier: 6 },
+    { id: "orel",     emoji: "🦅", name: "Orel",     rarity: "rare", tier: 6 },
+    { id: "labut",    emoji: "🦢", name: "Labuť",    rarity: "rare", tier: 6 },
+    { id: "jesterka", emoji: "🦎", name: "Ještěrka", rarity: "rare", tier: 6 },
+    // tier 7 — Věty (legendary)
+    { id: "vlk",        emoji: "🐺", name: "Vlk",        rarity: "legendary", tier: 7 },
+    { id: "medved",     emoji: "🐻", name: "Medvěd",     rarity: "legendary", tier: 7 },
+    { id: "drak",       emoji: "🐉", name: "Drak",       rarity: "legendary", tier: 7 },
+    { id: "jednorozec", emoji: "🦄", name: "Jednorožec", rarity: "legendary", tier: 7 }
   ],
 
   rarityWeight: { common: 6, rare: 3, legendary: 1 },
