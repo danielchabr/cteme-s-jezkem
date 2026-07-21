@@ -22,9 +22,15 @@ Klikni na **jméno hráče vlevo nahoře** (👥) a přepneš se mezi dětmi —
 hvězdičky, odemčené ostrovy i sbírku kartiček. Nového hráče přidáš tlačítkem **➕ Nový hráč**.
 Vše je uložené jen v tomto prohlížeči (nesynchronizuje se mezi zařízeními).
 
-### 🃏 Kartičky
+### 🃏 Kartičky a medaile
 Za každou dokončenou výzvu dítě získá zvířecí kartičku (běžná / vzácná / legendární).
-Duplikát dá bonus **+2 ⭐**. Celou sbírku ukazuje tlačítko **🃏 Moje kartičky**.
+Lepší kartičky jsou jen na **těžších ostrovech**, takže se vyplatí postupovat dál.
+
+**Medaile podle chyb** — každé kolo se hodnotí: **0 chyb → 🥇 zlato, 1 → 🥈 stříbro,
+2+ → 🥉 bronz**. Kartičky i ostrovy si pamatují svou **nejlepší medaili**. Když už máš na
+ostrově všechny kartičky, další kolo bez chyby **vylepší** tvou nejslabší kartičku na zlatou.
+Cíl: mít **celou sbírku zlatou** a 🥇 na všech ostrovech. Bronz je pořád výhra — zlato je
+bonus k dohonění.
 
 ### 🔊 Zapnutí českého hlasu (rodičům)
 Pokud ježek nemluví česky, přidejte český hlas:
