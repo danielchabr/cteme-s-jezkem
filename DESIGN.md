@@ -72,6 +72,19 @@ kartičky čekají na těžším ostrově"*. The legendary animals live on the h
 each island grants a one-time **+5 ⭐ first-clear bonus**. Completing the 24-card deck
 therefore requires reaching Věty.
 
+### Mastery grading (motivating *perfection*, even after the deck is full)
+Reading is about **accuracy**, so we reward playing a clean round. Each round is graded by
+wrong taps: **0 → 🥇 gold, 1 → 🥈 silver, 2+ → 🥉 bronze** (gold also gives +2 ⭐). Two things
+carry the grade:
+- **Every card has a best-grade** (a gold-framed "holo" card is the prize). Once an island's
+  card pool is fully collected, a replay **upgrades your lowest-graded card** toward gold —
+  so every round still matters and the endgame goal becomes *"turn the whole collection gold."*
+- **Every island shows its best medal** on the map (🥉/🥈/🥉), so "get gold on every island"
+  is a visible, never-ending target.
+
+Bronze is always framed as a win (happy animal) — gold is a sparkle to chase, never a "fail"
+state, which matters for a 6-year-old's confidence.
+
 ## 3. Czech-specific care
 - **Uppercase print first** (velká tiskací) — matches Czech Grade 1.
 - Diacritics introduced gently: short vowels first; **á/é/í** long marks and **háčky

@@ -57,9 +57,20 @@
   function loadState(id) {
     try {
       const s = JSON.parse(localStorage.getItem(saveKeyFor(id)));
-      if (s && typeof s.stars === "number") { if (!s.cards) s.cards = {}; if (!s.best) s.best = {}; return s; }
+      if (s && typeof s.stars === "number") return migrateState(s);
     } catch (e) {}
-    return { stars: 0, best: {}, cards: {} };
+    return { stars: 0, best: {}, cards: {}, cardGrades: {}, medals: {} };
+  }
+  // Add v3 fields (card grades + island medals) without touching prior progress.
+  // Cards/islands already earned default to bronze (1) — they predate grading.
+  function migrateState(s) {
+    if (!s.cards) s.cards = {};
+    if (!s.best) s.best = {};
+    if (!s.cardGrades) s.cardGrades = {};
+    if (!s.medals) s.medals = {};
+    Object.keys(s.cards).forEach(id => { if (!s.cardGrades[id]) s.cardGrades[id] = 1; });
+    Object.keys(s.best).forEach(id => { if (!s.medals[id]) s.medals[id] = 1; });
+    return s;
   }
   function save() {
     if (State && Profiles.activeId) { try { localStorage.setItem(saveKeyFor(Profiles.activeId), JSON.stringify(State)); } catch (e) {} }
@@ -74,7 +85,7 @@
     Profiles.list.push({ id: id, name: name, avatar: avatar });
     Profiles.activeId = id;
     saveProfiles();
-    State = { stars: 0, best: {}, cards: {} };
+    State = { stars: 0, best: {}, cards: {}, cardGrades: {}, medals: {} };
     save();
     return id;
   }
@@ -147,6 +158,14 @@
   function refreshStars() { const n = $("#starCount"); if (n && State) n.textContent = State.stars; }
   function refreshCards() { const n = $("#cardCount"); if (n) n.textContent = collectedCount() + "/" + DATA.cards.length; }
   function collectedCount() { return State ? Object.keys(State.cards).length : 0; }
+
+  /* Grades / medals: 1 = 🥉 bronze, 2 = 🥈 silver, 3 = 🥇 gold. */
+  const MEDAL = ["", "🥉", "🥈", "🥇"];
+  function gradeFromErrors(errors) { return errors === 0 ? 3 : errors === 1 ? 2 : 1; }
+  function cardGrade(id) { return (State.cardGrades && State.cardGrades[id]) || 0; }
+  function setCardGrade(id, g) { State.cardGrades = State.cardGrades || {}; if (g > (State.cardGrades[id] || 0)) State.cardGrades[id] = g; }
+  function islandMedal(id) { return (State.medals && State.medals[id]) || 0; }
+  function goldCount() { return State ? Object.keys(State.cards).filter(id => cardGrade(id) >= 3).length : 0; }
 
   function addStar(n) {
     n = n || 1;
@@ -267,14 +286,14 @@
     const map = el("div", "map");
     DATA.islands.forEach(is => {
       const unlocked = State.stars >= is.need;
-      const done = (State.best[is.id] || 0) > 0;
+      const medal = islandMedal(is.id);
       const card = el("button", "island" + (unlocked ? "" : " locked"));
       card.style.background = `linear-gradient(180deg, ${lighten(is.color)}, ${is.color})`;
       card.innerHTML =
         `<span class="emo">${is.emoji}</span>
          <span class="nm">${is.name}</span>
-         <span class="stat">${unlocked ? "⭐ " + (State.best[is.id] || 0) : "Potřebuješ " + is.need + " ⭐"}</span>
-         ${done ? '<span class="done">✅</span>' : ""}`;
+         <span class="stat">${unlocked ? (medal ? MEDAL[medal] + (medal < 3 ? " — zkus zlato!" : " zlato!") : "Zahraj si!") : "Potřebuješ " + is.need + " ⭐"}</span>
+         ${medal ? '<span class="imedal">' + MEDAL[medal] + '</span>' : ""}`;
       if (unlocked) card.onclick = () => { Sound.warm(); Sound.sfx.tap(); startIsland(is.id); };
       else card.onclick = () => { Sound.sfx.nudge(); Sound.say("Nasbírej víc hvězdiček!"); };
       map.appendChild(card);
@@ -282,7 +301,7 @@
     scr.appendChild(map);
 
     // Card-collection call-to-action
-    const cc = el("button", "collect-btn", `🃏 Moje kartičky — ${collectedCount()}/${DATA.cards.length}`);
+    const cc = el("button", "collect-btn", `🃏 Kartičky ${collectedCount()}/${DATA.cards.length} · 🥇 ${goldCount()}`);
     cc.onclick = () => { Sound.sfx.tap(); goCards(); };
     scr.appendChild(cc);
 
@@ -313,18 +332,20 @@
     back.onclick = () => { Sound.sfx.tap(); goHome(); };
     head.appendChild(back);
     head.appendChild(el("div", "spacer"));
-    head.appendChild(el("div", "coll-count", `🃏 ${collectedCount()} / ${DATA.cards.length}`));
+    head.appendChild(el("div", "coll-count", `🃏 ${collectedCount()}/${DATA.cards.length} · 🥇 ${goldCount()}`));
     scr.appendChild(head);
 
-    scr.appendChild(el("div", "speech", "Sbírej kartičky za splněné výzvy! 🌟"));
+    scr.appendChild(el("div", "speech", "Sbírej kartičky a vylepšuj je na 🥇 zlaté! Zahraj kolo bez chyby."));
 
     const grid = el("div", "card-grid");
     DATA.cards.forEach(c => {
       const count = State.cards[c.id] || 0;
       const owned = count > 0;
-      const card = el("div", "collectible " + c.rarity + (owned ? "" : " locked"));
+      const g = cardGrade(c.id);
+      const card = el("div", "collectible " + c.rarity + " grade-g" + g + (owned ? "" : " locked"));
       card.innerHTML = owned
-        ? `<span class="cemoji">${c.emoji}</span>
+        ? `${g ? `<span class="cmedal">${MEDAL[g]}</span>` : ""}
+           <span class="cemoji">${c.emoji}</span>
            <span class="cname">${c.name}</span>
            <span class="crar">${DATA.rarityName[c.rarity]}</span>
            ${count > 1 ? `<span class="cdup">×${count}</span>` : ""}`
@@ -345,20 +366,39 @@
   }
   function islandTier(id) { const is = DATA.islands.find(i => i.id === id); return is ? (is.tier || 1) : 1; }
 
-  // Award a card, gated by the island's tier: an island can only drop cards of
-  // its tier or easier. So easy islands quickly run dry (→ duplicates + a nudge
-  // to try harder ones), and the best cards live on the hardest islands.
-  function awardCard(islandId) {
+  // Award a card, gated by the island's tier (easy islands only drop easy
+  // cards). `grade` (1-3, from the round's error count) stamps the card:
+  //  - new card in the pool → collect it at this grade
+  //  - pool fully collected → UPGRADE the lowest-graded card this grade beats,
+  //    so replays keep mattering (goal: turn the whole collection gold)
+  function awardCard(islandId, grade) {
     const tier = islandTier(islandId);
     const eligible = DATA.cards.filter(c => (c.tier || 1) <= tier);
     const uncollected = eligible.filter(c => !State.cards[c.id]);
-    let card, isNew;
-    if (uncollected.length) { card = weightedPick(uncollected); isNew = true; }
-    else { card = weightedPick(eligible); isNew = false; }
-    State.cards[card.id] = (State.cards[card.id] || 0) + 1;
+    let card, isNew = false, upgraded = false, prevGrade = 0;
+
+    if (uncollected.length) {
+      card = weightedPick(uncollected); isNew = true;
+      State.cards[card.id] = 1;
+      setCardGrade(card.id, grade);
+    } else {
+      const improvable = eligible.filter(c => cardGrade(c.id) < grade)
+        .sort((a, b) => cardGrade(a.id) - cardGrade(b.id));
+      if (improvable.length) {
+        card = improvable[0]; prevGrade = cardGrade(card.id);
+        setCardGrade(card.id, grade); upgraded = true;
+        State.cards[card.id] = (State.cards[card.id] || 1) + 1;
+      } else {
+        card = weightedPick(eligible); prevGrade = cardGrade(card.id);
+        State.cards[card.id] = (State.cards[card.id] || 1) + 1;
+      }
+    }
     save();
-    const moreElsewhere = DATA.cards.some(c => !State.cards[c.id]);   // uncollected on harder islands
-    return { card: card, isNew: isNew, exhausted: !uncollected.length, moreElsewhere: moreElsewhere };
+    const moreElsewhere = DATA.cards.some(c => !State.cards[c.id]);
+    const allGoldHere = eligible.every(c => cardGrade(c.id) >= 3);
+    return { card: card, isNew: isNew, upgraded: upgraded, prevGrade: prevGrade,
+      newGrade: cardGrade(card.id), exhausted: !uncollected.length,
+      moreElsewhere: moreElsewhere, allGoldHere: allGoldHere };
   }
 
   /* =====================================================================
@@ -369,7 +409,7 @@
   function startIsland(id) {
     reseed();
     const questions = buildQuestions(id);
-    runRound(id, questions, 0, 0);
+    runRound(id, questions, 0, 0, { errors: 0 });   // ctx.errors tracks wrong taps
   }
 
   function buildQuestions(id) {
@@ -448,8 +488,8 @@
   }
 
   /* ---- the round runner ------------------------------------------------ */
-  function runRound(id, qs, idx, correctCount) {
-    if (idx >= qs.length) return finishRound(id, correctCount, qs.length);
+  function runRound(id, qs, idx, correctCount, ctx) {
+    if (idx >= qs.length) return finishRound(id, correctCount, qs.length, ctx.errors);
 
     const q = qs[idx];
     const s = screen(); s.innerHTML = "";
@@ -467,16 +507,16 @@
 
     scr.appendChild(el("div", "speech", q.instr));
 
-    if (q.kind === "choose") renderChoose(scr, q, onDone);
-    else if (q.kind === "build") renderBuild(scr, q, onDone);
+    if (q.kind === "choose") renderChoose(scr, q, onDone, ctx);
+    else if (q.kind === "build") renderBuild(scr, q, onDone, ctx);
 
     s.appendChild(scr);
 
-    function onDone() { runRound(id, qs, idx + 1, correctCount + 1); }
+    function onDone() { runRound(id, qs, idx + 1, correctCount + 1, ctx); }
   }
 
   /* ---- CHOOSE activity ------------------------------------------------- */
-  function renderChoose(scr, q, done) {
+  function renderChoose(scr, q, done, ctx) {
     if (q.prompt) {
       const card = el("div", "prompt-card");
       if (q.prompt.pic)      card.innerHTML = `<div class="pic">${q.prompt.pic}</div><div class="cap">${q.prompt.cap}</div>`;
@@ -512,6 +552,7 @@
           confetti(10);
           setTimeout(done, 900);
         } else {
+          if (ctx) ctx.errors++;
           btn.classList.add("wrong");
           btn.dataset.locked = "1";
           Sound.sfx.nudge();
@@ -528,7 +569,7 @@
   function lockAll(container) { container.querySelectorAll(".choice").forEach(b => b.dataset.locked = "1"); }
 
   /* ---- BUILD activity (syllable synthesis) ----------------------------- */
-  function renderBuild(scr, q, done) {
+  function renderBuild(scr, q, done, ctx) {
     const target = q.target;
     const tCons = target[0], tVow = target.slice(1);
     let cSlot = null, vSlot = null;
@@ -570,10 +611,13 @@
         Sound.sfx.correct(); addStar(); confetti(10);
         setTimeout(done, 1100);
       } else if (cSlot === tCons && vSlot !== tVow) {
+        if (ctx) ctx.errors++;
         Sound.sfx.nudge(); slotV.classList.remove("filled"); slotV.textContent = ""; vSlot = null;
       } else if (vSlot === tVow && cSlot !== tCons) {
+        if (ctx) ctx.errors++;
         Sound.sfx.nudge(); slotC.classList.remove("filled"); slotC.textContent = ""; cSlot = null;
       } else {
+        if (ctx) ctx.errors++;
         Sound.sfx.nudge();
         slotC.classList.remove("filled"); slotC.textContent = ""; cSlot = null;
         slotV.classList.remove("filled"); slotV.textContent = ""; vSlot = null;
@@ -586,19 +630,27 @@
   /* =====================================================================
    *  END OF ROUND  (stars + a collectible card)
    * ===================================================================== */
-  function finishRound(id, correct, total) {
+  function finishRound(id, correct, total, errors) {
     const island = DATA.islands.find(i => i.id === id);
-    const firstClear = !State.best[id];       // never finished this island before
+    const grade = gradeFromErrors(errors || 0);      // 3 gold / 2 silver / 1 bronze
+    const firstClear = !State.best[id];
     State.best[id] = Math.max(State.best[id] || 0, correct);
+
+    // island medal = best grade ever on this island
+    State.medals = State.medals || {};
+    const prevMedal = State.medals[id] || 0;
+    const medalUp = grade > prevMedal;
+    if (medalUp) State.medals[id] = grade;
     save();
 
-    const reward = awardCard(id);             // earn a card (gated by island tier)
-    if (!reward.isNew) addStar(2);            // duplicate → bonus stars instead
-    if (firstClear) addStar(5);               // first time on this island → bonus
+    const reward = awardCard(id, grade);      // earn/upgrade a card at this grade
+    if (!reward.isNew) addStar(2);            // duplicate/upgrade → bonus stars
+    if (firstClear) addStar(5);               // first clear of this island
+    if (grade === 3) addStar(2);              // flawless round bonus
     refreshCards();
 
-    Sound.sfx.win(); confetti(80);
-    setTimeout(() => Sound.say("Výborně! Skvělá práce!", { rate: 0.9 }), 300);
+    Sound.sfx.win(); confetti(grade === 3 ? 120 : 80);
+    setTimeout(() => Sound.say(grade === 3 ? "Perfektní! Bez chybičky!" : "Výborně! Skvělá práce!", { rate: 0.9 }), 300);
 
     const s = screen(); s.innerHTML = "";
     const scr = el("div", "screen");
@@ -606,30 +658,36 @@
     hero.querySelector(".hedgehog").classList.add("cheer");
     scr.appendChild(hero);
 
+    const gradeMsg = grade === 3 ? "Bez chyby!" : grade === 2 ? "Skoro bez chyby!" : "Dokončeno!";
     const card = el("div", "win-card");
     card.innerHTML =
-      `<div class="win-stars">${"⭐".repeat(Math.max(1, Math.min(5, Math.round(correct / total * 5))))}</div>
+      `<div class="win-medal g${grade}">${MEDAL[grade]}</div>
        <h2>Hotovo, ${island.name}!</h2>
-       <div style="font-weight:700;font-size:20px">Získal jsi ${correct} ⭐</div>
+       <div style="font-weight:700;font-size:20px">${MEDAL[grade]} ${gradeMsg}</div>
+       ${medalUp && !firstClear ? `<div class="firstclear">⬆️ Nová medaile ostrova: ${MEDAL[grade]}</div>` : ""}
        ${firstClear ? '<div class="firstclear">🏅 Nový ostrov zvládnutý! +5 ⭐</div>' : ""}`;
     scr.appendChild(card);
 
-    // Card reveal
+    // Card reveal (with grade)
     const c = reward.card;
+    const g = reward.newGrade;
     let label;
-    if (reward.isNew) label = "🎉 Nová kartička!";
-    else if (reward.exhausted && reward.moreElsewhere) label = "Tuhle už máš 🃏 Nové kartičky čekají na těžším ostrově! +2 ⭐";
+    if (reward.isNew) label = `🎉 Nová kartička! ${MEDAL[g]}`;
+    else if (reward.upgraded) label = `⬆️ Vylepšeno na ${MEDAL[g]}${g === 3 ? " ZLATÁ!" : ""}`;
+    else if (reward.allGoldHere && reward.moreElsewhere) label = "Tady máš vše zlaté! 🥇 Zkus těžší ostrov! +2 ⭐";
+    else if (reward.exhausted) label = "Tuhle už máš. Zkus kolo bez chyby pro zlato! +2 ⭐";
     else label = "Máš ji znovu! +2 ⭐";
     const reveal = el("div", "reveal " + c.rarity);
     reveal.innerHTML =
       `<div class="reveal-label">${label}</div>
-       <div class="collectible ${c.rarity} pop">
+       <div class="collectible ${c.rarity} grade-g${g} pop">
+         ${g ? `<span class="cmedal">${MEDAL[g]}</span>` : ""}
          <span class="cemoji">${c.emoji}</span>
          <span class="cname">${c.name}</span>
          <span class="crar">${DATA.rarityName[c.rarity]}</span>
        </div>`;
     scr.appendChild(reveal);
-    setTimeout(() => { if (c.rarity !== "common") Sound.sfx.star(); }, 500);
+    setTimeout(() => { if (g >= 3 || c.rarity !== "common") Sound.sfx.star(); }, 500);
 
     const nextIsland = nextUnlockable(id);
     const btns = el("div", "rowbtns");
