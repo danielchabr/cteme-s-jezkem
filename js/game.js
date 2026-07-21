@@ -343,14 +343,22 @@
     for (const c of pool) { r -= DATA.rarityWeight[c.rarity]; if (r <= 0) return c; }
     return pool[pool.length - 1];
   }
-  function awardCard() {
-    const uncollected = DATA.cards.filter(c => !State.cards[c.id]);
+  function islandTier(id) { const is = DATA.islands.find(i => i.id === id); return is ? (is.tier || 1) : 1; }
+
+  // Award a card, gated by the island's tier: an island can only drop cards of
+  // its tier or easier. So easy islands quickly run dry (→ duplicates + a nudge
+  // to try harder ones), and the best cards live on the hardest islands.
+  function awardCard(islandId) {
+    const tier = islandTier(islandId);
+    const eligible = DATA.cards.filter(c => (c.tier || 1) <= tier);
+    const uncollected = eligible.filter(c => !State.cards[c.id]);
     let card, isNew;
     if (uncollected.length) { card = weightedPick(uncollected); isNew = true; }
-    else { card = weightedPick(DATA.cards); isNew = false; }
+    else { card = weightedPick(eligible); isNew = false; }
     State.cards[card.id] = (State.cards[card.id] || 0) + 1;
     save();
-    return { card: card, isNew: isNew };
+    const moreElsewhere = DATA.cards.some(c => !State.cards[c.id]);   // uncollected on harder islands
+    return { card: card, isNew: isNew, exhausted: !uncollected.length, moreElsewhere: moreElsewhere };
   }
 
   /* =====================================================================
@@ -367,9 +375,10 @@
   function buildQuestions(id) {
     if (id === "vowels")     return times(ROUND_LEN, vowelQ);
     if (id === "consonants") return times(ROUND_LEN, consonantQ);
+    if (id === "lowercase")  return times(ROUND_LEN, lowercaseQ);
     if (id === "syllables")  return times(ROUND_LEN, syllableQ);
     if (id === "words")      return times(ROUND_LEN, wordQ);
-    if (id === "sentences")  return DATA.sentences.map(sentenceQ);
+    if (id === "sentences")  return sample(DATA.sentences, ROUND_LEN).map(sentenceQ);
     return [];
   }
   const times = (n, fn) => Array.from({ length: n }, fn);
@@ -377,11 +386,24 @@
   /* ---- question generators --------------------------------------------- */
 
   function vowelQ() {
-    const target = pick(DATA.vowels);
-    const opts = shuffle([target, ...sample(DATA.vowels, 2, target)]);
+    const target = pick(DATA.vowelSet);                 // short + long vowels
+    const opts = shuffle([target, ...sample(DATA.vowelSet, 2, target)]);
     return { kind: "choose", say: target, prompt: null,
       choices: opts.map(v => ({ big: v, value: v })), answer: target,
       instr: "Poslouchej a najdi písmenko." };
+  }
+
+  // Malá písmena: show a big (uppercase) letter, tap its small (lowercase) twin.
+  // Pure visual matching — no audio (letter names via TTS are unreliable).
+  function lowercaseQ() {
+    const pool = DATA.matchLetters.split("");
+    const target = pick(pool);
+    const opts = shuffle([target, ...sample(pool, 2, target)]);
+    return { kind: "choose", silent: true,
+      prompt: { big: target },
+      choices: opts.map(L => ({ big: L.toLowerCase(), value: L.toLowerCase() })),
+      answer: target.toLowerCase(),
+      instr: "Najdi malé písmenko." };
   }
 
   function consonantQ() {
@@ -464,12 +486,15 @@
     }
 
     const speak = () => {
+      if (q.silent) return;
       if (q.hint) Sound.sayHint(q.hint, q.say);
       else Sound.say(q.say, { rate: q.say.length <= 2 ? 0.7 : 0.85 });
     };
-    const listen = el("button", "listen", "🔊 Poslech");
-    listen.onclick = () => { Sound.warm(); Sound.sfx.tap(); speak(); };
-    scr.appendChild(listen);
+    if (!q.silent) {
+      const listen = el("button", "listen", "🔊 Poslech");
+      listen.onclick = () => { Sound.warm(); Sound.sfx.tap(); speak(); };
+      scr.appendChild(listen);
+    }
 
     const choices = el("div", "choices" + (q.three ? " three" : ""));
     q.choices.forEach(c => {
@@ -563,11 +588,13 @@
    * ===================================================================== */
   function finishRound(id, correct, total) {
     const island = DATA.islands.find(i => i.id === id);
+    const firstClear = !State.best[id];       // never finished this island before
     State.best[id] = Math.max(State.best[id] || 0, correct);
     save();
 
-    const reward = awardCard();               // always earn a card for finishing
+    const reward = awardCard(id);             // earn a card (gated by island tier)
     if (!reward.isNew) addStar(2);            // duplicate → bonus stars instead
+    if (firstClear) addStar(5);               // first time on this island → bonus
     refreshCards();
 
     Sound.sfx.win(); confetti(80);
@@ -583,14 +610,19 @@
     card.innerHTML =
       `<div class="win-stars">${"⭐".repeat(Math.max(1, Math.min(5, Math.round(correct / total * 5))))}</div>
        <h2>Hotovo, ${island.name}!</h2>
-       <div style="font-weight:700;font-size:20px">Získal jsi ${correct} ⭐</div>`;
+       <div style="font-weight:700;font-size:20px">Získal jsi ${correct} ⭐</div>
+       ${firstClear ? '<div class="firstclear">🏅 Nový ostrov zvládnutý! +5 ⭐</div>' : ""}`;
     scr.appendChild(card);
 
     // Card reveal
     const c = reward.card;
+    let label;
+    if (reward.isNew) label = "🎉 Nová kartička!";
+    else if (reward.exhausted && reward.moreElsewhere) label = "Tuhle už máš 🃏 Nové kartičky čekají na těžším ostrově! +2 ⭐";
+    else label = "Máš ji znovu! +2 ⭐";
     const reveal = el("div", "reveal " + c.rarity);
     reveal.innerHTML =
-      `<div class="reveal-label">${reward.isNew ? "🎉 Nová kartička!" : "Máš ji znovu! +2 ⭐"}</div>
+      `<div class="reveal-label">${label}</div>
        <div class="collectible ${c.rarity} pop">
          <span class="cemoji">${c.emoji}</span>
          <span class="cname">${c.name}</span>

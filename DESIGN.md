@@ -50,14 +50,27 @@ celebrates, and **you can never "lose"** — a wrong tap just gently re-asks.
 
 | # | Island (Ostrov) | Skill | Task |
 |---|---|---|---|
-| 1 | **Samohlásky** (Vowels) A E I O U | Letter–sound for vowels | Hear a vowel, tap it |
-| 2 | **Písmenka** (Consonants) M L S P T … | Letter–sound + keyword picture | Hear a sound, tap its letter |
-| 3 | **Slabiky** (Syllables) MA ME MI … | **Blending** — the core skill | Build a syllable, then hear-and-pick |
-| 4 | **Slova** (Words) MÁMA, LES, PES … | Decode & comprehend | Match the written word to its picture |
-| 5 | **Věty** (Sentences) TO JE PES. | Read for meaning | Read a short sentence, pick the picture |
+| 1 | **Samohlásky** (Vowels) A E I O U + Á É Í Ó Ú | Vowel sounds incl. **length** | Hear a vowel, tap it |
+| 2 | **Písmenka** (Consonants) B…Ž incl. Č Š Ž Ř CH | Initial sound → letter | Hear a word, tap its first letter |
+| 3 | **Malá písmena** (Lowercase) A↔a, B↔b … | **Uppercase → lowercase** letter forms | See a big letter, tap its small twin |
+| 4 | **Slabiky** (Syllables) MA … ČA ŽE | **Blending** — the core skill | Build the syllable you hear |
+| 5 | **Slova** (Words) ~40 words | Decode & comprehend | Match the written word to its picture |
+| 6 | **Věty** (Sentences) ~16 sentences | Read for meaning | Read a sentence, pick the picture |
 
 Islands unlock in order; each needs a small number of stars to open the next, so the child
 always plays inside their zone of competence (adaptive gating).
+
+**Only distinct-sounding vowels are used for hear-and-pick.** Czech y/i, ý/í and ú/ů are
+homophones (identical sound), so they can't be told apart by ear — they're taught inside
+words, not in the vowel-sound game.
+
+### Motivating the climb (so kids don't grind the easy island)
+Every finished round earns a **collectible animal card**, but cards are **tier-gated**: an
+island only drops cards of its own difficulty tier or easier. So the easiest island's ~4
+cards fill up fast, after which it only pays out duplicate **+2 ⭐** and a nudge — *"nové
+kartičky čekají na těžším ostrově"*. The legendary animals live on the hardest islands, and
+each island grants a one-time **+5 ⭐ first-clear bonus**. Completing the 24-card deck
+therefore requires reaching Věty.
 
 ## 3. Czech-specific care
 - **Uppercase print first** (velká tiskací) — matches Czech Grade 1.
