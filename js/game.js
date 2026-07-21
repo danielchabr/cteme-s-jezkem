@@ -151,12 +151,15 @@
     const target = pick(DATA.consonants);
     const others = sample(DATA.consonants, 2, target);
     const opts = shuffle([target, ...others]);
+    // Say ONLY the word (e.g. "Slunce"); the child works out the first letter.
+    // We deliberately don't speak the isolated letter: Czech TTS reads it as the
+    // letter *name* ("es", "el"), not the sound, and it also gave away the answer.
     return { kind: "choose",
-      sayHint: null, say: target.word,           // full word = reliable audio
+      say: target.word,
       prompt: { pic: target.emoji, cap: "?" },
       choices: opts.map(c => ({ big: c.letter, value: c.letter })),
       answer: target.letter,
-      instr: `Kterým písmenkem začíná?` , sayFirst: `${target.word}. ${target.letter}.` };
+      instr: "Kterým písmenkem začíná?" };
   }
 
   // 3. Syllables: build the spoken target from consonant + vowel tiles.
@@ -231,8 +234,7 @@
     }
 
     const speak = () => {
-      if (q.sayFirst) Sound.say(q.sayFirst, { rate: 0.75 });
-      else if (q.hint) Sound.sayHint(q.hint, q.say);
+      if (q.hint) Sound.sayHint(q.hint, q.say);
       else Sound.say(q.say, { rate: q.say.length <= 2 ? 0.7 : 0.85 });
     };
     const listen = el("button", "listen", "🔊 Poslech");
