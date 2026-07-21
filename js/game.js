@@ -460,11 +460,19 @@
   }
 
   function syllableQ() {
-    const grp = pick(DATA.syllableGroups);
-    const target = pick(grp.syllables);
-    const otherC = pick(DATA.syllableGroups.filter(g => g.c !== grp.c)).c;
-    return { kind: "build", target: target, cons: shuffle([grp.c, otherC]),
-      vowels: DATA.vowels.slice(), instr: "Postav slabiku, kterou slyšíš." };
+    const cObj = pick(DATA.syllableConsonants);
+    const c = cObj.c;
+    const useLong = rnd() < 0.4;                         // ~40% long-vowel syllables
+    let vowelPool = (useLong ? DATA.longVowels : DATA.vowels).slice();
+    if (cObj.hardOnly) vowelPool = vowelPool.filter(v => v !== "I" && v !== "Í"); // no soft di/ti/ni
+    const vowel = pick(vowelPool);
+    const target = c + vowel;
+    // 3 consonant tiles: the target + 2 distractors
+    const others = sample(DATA.syllableConsonants.filter(x => x.c !== c), 2).map(x => x.c);
+    return { kind: "build", target: target,
+      cons: shuffle([c, others[0], others[1]]),
+      vowelsShort: DATA.vowels.slice(), vowelsLong: DATA.longVowels.slice(),
+      instr: "Postav slabiku, kterou slyšíš." };
   }
 
   function wordQ() {
@@ -592,14 +600,22 @@
       t.onclick = () => { if (builder.dataset.locked) return; Sound.sfx.tap(); cSlot = c; slotC.textContent = c; slotC.classList.add("filled"); check(); };
       consRow.appendChild(t);
     });
-    const vowRow = el("div", "tile-row");
-    q.vowels.forEach(v => {
+    scr.appendChild(consRow);
+
+    // vowel tiles: short row + long row (so long-vowel syllables are buildable)
+    const addVowel = (v, row) => {
       const t = el("button", "tile vowel", v);
       t.onclick = () => { if (builder.dataset.locked) return; Sound.sfx.tap(); vSlot = v; slotV.textContent = v; slotV.classList.add("filled"); check(); };
-      vowRow.appendChild(t);
-    });
-    scr.appendChild(consRow);
+      row.appendChild(t);
+    };
+    const vowRow = el("div", "tile-row");
+    (q.vowelsShort || q.vowels || []).forEach(v => addVowel(v, vowRow));
     scr.appendChild(vowRow);
+    if (q.vowelsLong && q.vowelsLong.length) {
+      const longRow = el("div", "tile-row");
+      q.vowelsLong.forEach(v => addVowel(v, longRow));
+      scr.appendChild(longRow);
+    }
 
     function check() {
       if (cSlot == null || vSlot == null) return;

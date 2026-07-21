@@ -49,24 +49,20 @@ const DATA = {
    * Base letters whose lower/upper shapes a child must learn to pair. */
   matchLetters: "ABCDEFGHIJKLMNOPRSTUVZ",
 
-  /* Slabiky (open CV syllables) grouped by consonant — now incl. háček
-   * consonants (Č Š Ž). The heart of Czech reading: souhláska + samohláska. */
-  syllableGroups: [
-    { c: "M", syllables: ["MA", "ME", "MI", "MO", "MU"] },
-    { c: "L", syllables: ["LA", "LE", "LI", "LO", "LU"] },
-    { c: "S", syllables: ["SA", "SE", "SI", "SO", "SU"] },
-    { c: "P", syllables: ["PA", "PE", "PI", "PO", "PU"] },
-    { c: "T", syllables: ["TA", "TE", "TI", "TO", "TU"] },
-    { c: "K", syllables: ["KA", "KE", "KI", "KO", "KU"] },
-    { c: "V", syllables: ["VA", "VE", "VI", "VO", "VU"] },
-    { c: "N", syllables: ["NA", "NE", "NI", "NO", "NU"] },
-    { c: "D", syllables: ["DA", "DE", "DI", "DO", "DU"] },
-    { c: "J", syllables: ["JA", "JE", "JI", "JO", "JU"] },
-    { c: "R", syllables: ["RA", "RE", "RI", "RO", "RU"] },
-    { c: "Č", syllables: ["ČA", "ČE", "ČI", "ČO", "ČU"] },
-    { c: "Š", syllables: ["ŠA", "ŠE", "ŠI", "ŠO", "ŠU"] },
-    { c: "Ž", syllables: ["ŽA", "ŽE", "ŽI", "ŽO", "ŽU"] }
+  /* Slabiky (open CV syllables). Built from consonant + vowel at runtime, with
+   * both SHORT and LONG vowels for variety (MA/MÁ, MI/MÍ …). The heart of Czech
+   * reading: souhláska + samohláska.
+   *
+   * `hardOnly` marks D/T/N: Czech softens di/ti/ni → ďi/ťi/ňi (and dí/tí/ní),
+   * which sounds "wrong" in a hard-consonant blending drill, so we skip I/Í for
+   * those three. (di/ti/ni vs dy/ty/ny is a separate, later lesson.) */
+  syllableConsonants: [
+    { c: "M" }, { c: "L" }, { c: "S" }, { c: "P" }, { c: "T", hardOnly: true },
+    { c: "K" }, { c: "V" }, { c: "N", hardOnly: true }, { c: "D", hardOnly: true },
+    { c: "J" }, { c: "R" }, { c: "B" }, { c: "H" }, { c: "Z" },
+    { c: "Č" }, { c: "Š" }, { c: "Ž" }
   ],
+  longVowels: ["Á", "É", "Í", "Ó", "Ú"],   // short vowels are DATA.vowels above
 
   /* Slova (words) with pictures — a big, varied deck so words rarely repeat.
    * `hint` (optional) claps the word into syllables when read aloud. */
