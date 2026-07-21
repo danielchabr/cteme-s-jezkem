@@ -292,7 +292,7 @@
       card.innerHTML =
         `<span class="emo">${is.emoji}</span>
          <span class="nm">${is.name}</span>
-         <span class="stat">${unlocked ? (medal ? MEDAL[medal] + (medal < 3 ? " — zkus zlato!" : " zlato!") : "Zahraj si!") : "Potřebuješ " + is.need + " ⭐"}</span>
+         <span class="stat">${unlocked ? (medal ? (medal < 3 ? "Zkus zlato!" : "Zlato!") : "Zahraj si!") : "Potřebuješ " + is.need + " ⭐"}</span>
          ${medal ? '<span class="imedal">' + MEDAL[medal] + '</span>' : ""}`;
       if (unlocked) card.onclick = () => { Sound.warm(); Sound.sfx.tap(); startIsland(is.id); };
       else card.onclick = () => { Sound.sfx.nudge(); Sound.say("Nasbírej víc hvězdiček!"); };
